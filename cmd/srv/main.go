@@ -23,7 +23,7 @@ func main() () {
 		log.Fatalf("Error opening \"%v\" port \"%v\": \"%v\".\n", config.Protocol, config.Port, err.Error())
 	}
 	grpcServer := grpc.NewServer()
-	pb.RegisterEvolveServiceServer(grpcServer, new(services.EvolveService))
+	pb.RegisterCreatureServiceServer(grpcServer, new(services.CreatureService))
 
 	wrappedGRPCServer := grpcweb.WrapServer(grpcServer)
 	httpServer := http.Server{}
