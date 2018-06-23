@@ -1,10 +1,12 @@
 package services
 
 import (
-	"../pb"
 	"golang.org/x/net/context"
 	"log"
 	"google.golang.org/grpc/metadata"
+	"math/rand"
+	"experimental/evolve-rpc/pkg/models/creature"
+	"experimental/evolve-rpc/pkg/pb"
 )
 
 type CreatureService struct {

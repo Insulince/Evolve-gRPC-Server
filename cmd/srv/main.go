@@ -1,15 +1,15 @@
 package main
 
 import (
-	"../../pkg/configurations"
 	"log"
 	"fmt"
 	"net"
 	"google.golang.org/grpc"
-	"../../pkg/pb"
-	"../../pkg/services"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"net/http"
+	"experimental/evolve-rpc/pkg/services"
+	"experimental/evolve-rpc/pkg/pb"
+	"experimental/evolve-rpc/pkg/configurations"
 )
 
 func main() () {
