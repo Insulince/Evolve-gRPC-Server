@@ -7,9 +7,9 @@ import (
 	"google.golang.org/grpc"
 	"github.com/improbable-eng/grpc-web/go/grpcweb"
 	"net/http"
-	"experimental/evolve-rpc/pkg/services"
-	"experimental/evolve-rpc/pkg/pb"
-	"experimental/evolve-rpc/pkg/configurations"
+	"evolve-rpc/pkg/services"
+	"evolve-rpc/pkg/pb"
+	"evolve-rpc/pkg/configurations"
 )
 
 func main() () {

@@ -5,8 +5,8 @@ import (
 	"log"
 	"google.golang.org/grpc/metadata"
 	"math/rand"
-	"experimental/evolve-rpc/pkg/models/creature"
-	"experimental/evolve-rpc/pkg/pb"
+	"evolve-rpc/pkg/models/creature"
+	"evolve-rpc/pkg/pb"
 )
 
 type CreatureService struct {
