@@ -8,12 +8,13 @@ import (
 	"evolve-rpc/pkg/pb"
 	"evolve-rpc/pkg"
 	"sync"
+	"io"
 )
 
 type CreatureService struct {
 }
 
-func (evolveService *CreatureService) GenerateCreatureRpc(context context.Context, request *pb.GenerateCreatureRpcRequest) (response *pb.GenerateCreatureRpcResponse, err error) {
+func (creatureService *CreatureService) GenerateCreatureRpc(context context.Context, request *pb.GenerateCreatureRpcRequest) (response *pb.GenerateCreatureRpcResponse, err error) {
 	log.Printf("GenerateCreatureRpc: Interaction started.\n")
 	defer log.Printf("GenerateCreatureRpc: Interaction complete.\n")
 
@@ -35,7 +36,7 @@ func (evolveService *CreatureService) GenerateCreatureRpc(context context.Contex
 
 	log.Printf("GenerateCreatureRpc: Sending response to client.\n")
 	return &pb.GenerateCreatureRpcResponse{
-		Creature: &pb.CreatureMessage{
+		CreatureMessage: &pb.CreatureMessage{
 			Name:       name,
 			Generation: generation,
 			Speed:      speed,
@@ -46,18 +47,18 @@ func (evolveService *CreatureService) GenerateCreatureRpc(context context.Contex
 	}, nil
 }
 
-func (evolveService *CreatureService) GenerateCreaturesRpc(request *pb.GenerateCreaturesRpcRequest, stream pb.CreatureService_GenerateCreaturesRpcServer) (err error) {
-	log.Printf("GenerateCreaturesRpc:  Interaction started.\n")
-	defer log.Printf("GenerateCreaturesRpc:  Interaction complete.\n")
+func (creatureService *CreatureService) GenerateCreaturesRpc(request *pb.GenerateCreaturesRpcRequest, stream pb.CreatureService_GenerateCreaturesRpcServer) (err error) {
+	log.Printf("GenerateCreaturesRpc: Interaction started.\n")
+	defer log.Printf("GenerateCreaturesRpc: Interaction complete.\n")
 
 	contextMetadata, ok := metadata.FromIncomingContext(stream.Context())
 	if ok {
-		log.Printf("GenerateCreaturesRpc:  Metadata received: \"%v\".\n", contextMetadata)
+		log.Printf("GenerateCreaturesRpc: Metadata received: \"%v\".\n", contextMetadata)
 	} else {
-		log.Fatalf("GenerateCreaturesRpc:  Unable to read metadata!\n")
+		log.Fatalf("GenerateCreaturesRpc: Unable to read metadata!\n")
 	}
 
-	log.Printf("GenerateCreaturesRpc:  RpcRequest received: \"%v\".\n", request)
+	log.Printf("GenerateCreaturesRpc: RpcRequest received: \"%v\".\n", request)
 
 	var wg sync.WaitGroup
 	wg.Add(int(request.Quantity))
@@ -74,7 +75,7 @@ func (evolveService *CreatureService) GenerateCreaturesRpc(request *pb.GenerateC
 
 			stream.Send(
 				&pb.GenerateCreaturesRpcResponse{
-					Creature: &pb.CreatureMessage{
+					CreatureMessage: &pb.CreatureMessage{
 						Name:       name,
 						Generation: generation,
 						Speed:      speed,
@@ -88,5 +89,65 @@ func (evolveService *CreatureService) GenerateCreaturesRpc(request *pb.GenerateC
 	}
 	wg.Wait()
 
+	return nil
+}
+
+func (creatureService *CreatureService) SimulateCreatureRpc(context context.Context, request *pb.SimulateCreatureRpcRequest) (response *pb.SimulateCreatureRpcResponse, err error) {
+	log.Printf("SimulateCreatureRpc: Interaction started.\n")
+	defer log.Printf("SimulateCreatureRpc: Interaction complete.\n")
+
+	contextMetadata, ok := metadata.FromIncomingContext(context)
+	if ok {
+		log.Printf("SimulateCreatureRpc: Metadata received: \"%v\".\n", contextMetadata)
+	} else {
+		log.Fatalf("SimulateCreatureRpc: Unable to read metadata!\n")
+	}
+
+	log.Printf("SimulateCreatureRpc: Request received: \"%v\".\n", request)
+
+	// TODO: Do Business Logic Here.
+
+	log.Printf("SimulateCreatureRpc: Sending response to client.\n")
+	return &pb.SimulateCreatureRpcResponse{
+		CreatureMessage: request.CreatureMessage,
+	}, nil
+}
+
+func (creatureService *CreatureService) SimulateCreaturesRpc(stream pb.CreatureService_SimulateCreaturesRpcServer) (err error) {
+	log.Printf("SimulateCreaturesRpc: Interaction started.\n")
+	defer log.Printf("SimulateCreaturesRpc: Interaction complete.\n")
+
+	contextMetadata, ok := metadata.FromIncomingContext(stream.Context())
+	if ok {
+		log.Printf("SimulateCreaturesRpc: Metadata received: \"%v\".\n", contextMetadata)
+	} else {
+		log.Fatalf("SimulateCreaturesRpc: Unable to read metadata!\n")
+	}
+
+	log.Printf("SimulateCreaturesRpc: BiDirectional RpcRequest received, opening client stream.\n")
+
+	for {
+		request, err := stream.Recv()
+		if err == io.EOF {
+			log.Printf("SimulateCreaturesRpc: Client stream closed.\n")
+			break
+		}
+		if err != nil {
+			log.Printf("SimulateCreaturesRpc: Request error: \"%v\".\n", err.Error())
+			return err
+		}
+		log.Printf("SimulateCreaturesRpc: RpcRequest received: \"%v\".\n", request)
+
+		// TODO: Do Business Logic Here.
+
+		log.Printf("SimulateCreaturesRpc: Sending response to cllient.")
+		stream.Send(
+			&pb.SimulateCreaturesRpcResponse{
+				CreatureMessage: request.CreatureMessage,
+			},
+		)
+	}
+
+	log.Printf("SimulateCreaturesRpc: Closing server stream.\n")
 	return nil
 }
