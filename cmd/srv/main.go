@@ -31,7 +31,10 @@ func main() () {
 	grpcServer := grpc.NewServer()
 	pb.RegisterCreatureServiceServer(grpcServer, new(services.CreatureService))
 
-	wrappedGRPCServer := grpcweb.WrapServer(grpcServer)
+	wrappedGRPCServer := grpcweb.WrapServer(grpcServer, grpcweb.WithWebsockets(true), grpcweb.WithWebsocketOriginFunc(func(req *http.Request) bool {
+		return true
+	}))
+
 	httpServer := http.Server{}
 	httpServer.Handler = http.HandlerFunc(wrappedGRPCServer.ServeHTTP)
 
