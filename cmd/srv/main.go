@@ -10,7 +10,13 @@ import (
 	"evolve-rpc/pkg/services"
 	"evolve-rpc/pkg/pb"
 	"evolve-rpc/pkg/configurations"
+	"math/rand"
+	"time"
 )
+
+func init() () {
+	rand.Seed(time.Now().Unix())
+}
 
 func main() () {
 	log.Printf("Evolve API starting up.\n")
