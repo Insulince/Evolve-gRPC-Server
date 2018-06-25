@@ -8,7 +8,7 @@ import (
 	"evolve-rpc/pkg/pb"
 	"evolve-rpc/pkg"
 	"sync"
-	"io"
+	"evolve-rpc/pkg/models/creature"
 )
 
 type CreatureService struct {
@@ -37,21 +37,23 @@ func (creatureService *CreatureService) GenerateCreatureRpc(context context.Cont
 	log.Printf("GenerateCreatureRpc: Sending response to client.\n")
 	return &pb.GenerateCreatureRpcResponse{
 		CreatureMessage: &pb.CreatureMessage{
-			Name:       name,
-			Generation: generation,
-			Speed:      speed,
-			Stamina:    stamina,
-			Health:     health,
-			Greed:      greed,
+			Name:                    name,
+			Generation:              generation,
+			Speed:                   speed,
+			Stamina:                 stamina,
+			Health:                  health,
+			Greed:                   greed,
+			FitnessValue:            0,
+			SimulatedThisGeneration: false,
 		},
 	}, nil
 }
 
-func (creatureService *CreatureService) GenerateCreaturesRpc(request *pb.GenerateCreaturesRpcRequest, stream pb.CreatureService_GenerateCreaturesRpcServer) (err error) {
+func (creatureService *CreatureService) GenerateCreaturesRpc(context context.Context, request *pb.GenerateCreaturesRpcRequest) (response *pb.GenerateCreaturesRpcResponse, err error) {
 	log.Printf("GenerateCreaturesRpc: Interaction started.\n")
 	defer log.Printf("GenerateCreaturesRpc: Interaction complete.\n")
 
-	contextMetadata, ok := metadata.FromIncomingContext(stream.Context())
+	contextMetadata, ok := metadata.FromIncomingContext(context)
 	if ok {
 		log.Printf("GenerateCreaturesRpc: Metadata received: \"%v\".\n", contextMetadata)
 	} else {
@@ -60,12 +62,15 @@ func (creatureService *CreatureService) GenerateCreaturesRpc(request *pb.Generat
 
 	log.Printf("GenerateCreaturesRpc: RpcRequest received: \"%v\".\n", request)
 
+	var creatureMessages []*pb.CreatureMessage
+
 	var wg sync.WaitGroup
 	wg.Add(int(request.Quantity))
+
+	creatureMessageChannel := make(chan *pb.CreatureMessage)
+
 	for i := int64(0); i < request.Quantity; i++ {
 		go func() {
-			defer wg.Done()
-
 			name := util.GenerateRandomName()
 			generation := int64(0)
 			speed := rand.Float64()
@@ -73,23 +78,32 @@ func (creatureService *CreatureService) GenerateCreaturesRpc(request *pb.Generat
 			health := rand.Float64()
 			greed := rand.Float64()
 
-			stream.Send(
-				&pb.GenerateCreaturesRpcResponse{
-					CreatureMessage: &pb.CreatureMessage{
-						Name:       name,
-						Generation: generation,
-						Speed:      speed,
-						Stamina:    stamina,
-						Health:     health,
-						Greed:      greed,
-					},
-				},
-			)
+			creatureMessageChannel <- &pb.CreatureMessage{
+				Name:                    name,
+				Generation:              generation,
+				Speed:                   speed,
+				Stamina:                 stamina,
+				Health:                  health,
+				Greed:                   greed,
+				FitnessValue:            0,
+				SimulatedThisGeneration: false,
+			}
+
 		}()
 	}
+
+	go func() {
+		for creatureMessage := range creatureMessageChannel {
+			creatureMessages = append(creatureMessages, creatureMessage)
+			wg.Done()
+		}
+	}()
+
 	wg.Wait()
 
-	return nil
+	return &pb.GenerateCreaturesRpcResponse{
+		CreatureMessages: creatureMessages,
+	}, nil
 }
 
 func (creatureService *CreatureService) SimulateCreatureRpc(context context.Context, request *pb.SimulateCreatureRpcRequest) (response *pb.SimulateCreatureRpcResponse, err error) {
@@ -105,49 +119,62 @@ func (creatureService *CreatureService) SimulateCreatureRpc(context context.Cont
 
 	log.Printf("SimulateCreatureRpc: Request received: \"%v\".\n", request)
 
-	// TODO: Do Business Logic Here.
+	creature := creature_model.FromMessage(request.CreatureMessage)
+
+	creature.Simulate()
+
+	creatureMessage := creature_model.ToMessage(creature)
 
 	log.Printf("SimulateCreatureRpc: Sending response to client.\n")
 	return &pb.SimulateCreatureRpcResponse{
-		CreatureMessage: request.CreatureMessage,
-	}, nil
+		CreatureMessage: creatureMessage,
+	},
+		nil
 }
 
-func (creatureService *CreatureService) SimulateCreaturesRpc(stream pb.CreatureService_SimulateCreaturesRpcServer) (err error) {
+func (creatureService *CreatureService) SimulateCreaturesRpc(context context.Context, request *pb.SimulateCreaturesRpcRequest) (response *pb.SimulateCreaturesRpcResponse, err error) {
 	log.Printf("SimulateCreaturesRpc: Interaction started.\n")
 	defer log.Printf("SimulateCreaturesRpc: Interaction complete.\n")
 
-	contextMetadata, ok := metadata.FromIncomingContext(stream.Context())
+	contextMetadata, ok := metadata.FromIncomingContext(context)
 	if ok {
 		log.Printf("SimulateCreaturesRpc: Metadata received: \"%v\".\n", contextMetadata)
 	} else {
 		log.Fatalf("SimulateCreaturesRpc: Unable to read metadata!\n")
 	}
 
-	log.Printf("SimulateCreaturesRpc: BiDirectional RpcRequest received, opening client stream.\n")
+	log.Printf("SimulateCreaturesRpc: RpcRequest received: \"%v\".\n", request)
 
-	for {
-		request, err := stream.Recv()
-		if err == io.EOF {
-			log.Printf("SimulateCreaturesRpc: Client stream closed.\n")
-			break
-		}
-		if err != nil {
-			log.Printf("SimulateCreaturesRpc: Request error: \"%v\".\n", err.Error())
-			return err
-		}
-		log.Printf("SimulateCreaturesRpc: RpcRequest received: \"%v\".\n", request)
+	var creatureMessages []*pb.CreatureMessage
 
-		// TODO: Do Business Logic Here.
+	var wg sync.WaitGroup
+	wg.Add(len(request.CreatureMessages))
 
-		log.Printf("SimulateCreaturesRpc: Sending response to cllient.")
-		stream.Send(
-			&pb.SimulateCreaturesRpcResponse{
-				CreatureMessage: request.CreatureMessage,
-			},
-		)
+	creatureMessageChannel := make(chan *pb.CreatureMessage)
+
+	for _, creatureMessage := range request.CreatureMessages {
+		go func(creatureMessage *pb.CreatureMessage) {
+			creature := creature_model.FromMessage(creatureMessage)
+
+			creature.Simulate()
+
+			creatureMessage = creature_model.ToMessage(creature)
+
+			creatureMessageChannel <- creatureMessage
+		}(creatureMessage)
 	}
 
-	log.Printf("SimulateCreaturesRpc: Closing server stream.\n")
-	return nil
+	go func() {
+		for creatureMessage := range creatureMessageChannel {
+			creatureMessages = append(creatureMessages, creatureMessage)
+			wg.Done()
+		}
+	}()
+
+	wg.Wait()
+
+	return &pb.SimulateCreaturesRpcResponse{
+		CreatureMessages: creatureMessages,
+	},
+		nil
 }
