@@ -87,6 +87,7 @@ func (creatureService *CreatureService) GenerateCreaturesRpc(context context.Con
 				Greed:                   greed,
 				FitnessValue:            0,
 				SimulatedThisGeneration: false,
+				Outcome:                 "UNSET",
 			}
 
 		}()
@@ -174,6 +175,216 @@ func (creatureService *CreatureService) SimulateCreaturesRpc(context context.Con
 	wg.Wait()
 
 	return &pb.SimulateCreaturesRpcResponse{
+		CreatureMessages: creatureMessages,
+	},
+		nil
+}
+
+func (creatureService *CreatureService) NaturallySelectCreatureRpc(context context.Context, request *pb.NaturallySelectCreatureRpcRequest) (response *pb.NaturallySelectCreatureRpcResponse, err error) {
+	log.Printf("NaturallySelectCreatureRpc: Interaction started.\n")
+	defer log.Printf("NaturallySelectCreatureRpc: Interaction complete.\n")
+
+	contextMetadata, ok := metadata.FromIncomingContext(context)
+	if ok {
+		log.Printf("NaturallySelectCreatureRpc: Metadata received: \"%v\".\n", contextMetadata)
+	} else {
+		log.Fatalf("NaturallySelectCreatureRpc: Unable to read metadata!\n")
+	}
+
+	log.Printf("NaturallySelectCreatureRpc: Request received: \"%v\".\n", request)
+
+	creature := creature_model.FromMessage(request.CreatureMessage)
+
+	creature.NaturallySelect()
+
+	creatureMessage := creature_model.ToMessage(creature)
+
+	log.Printf("NaturallySelectCreatureRpc: Sending response to client.\n")
+	return &pb.NaturallySelectCreatureRpcResponse{
+		CreatureMessage: creatureMessage,
+	},
+		nil
+}
+
+func (creatureService *CreatureService) NaturallySelectCreaturesRpc(context context.Context, request *pb.NaturallySelectCreaturesRpcRequest) (response *pb.NaturallySelectCreaturesRpcResponse, err error) {
+	log.Printf("NaturallySelectCreaturesRpc: Interaction started.\n")
+	defer log.Printf("NaturallySelectCreaturesRpc: Interaction complete.\n")
+
+	contextMetadata, ok := metadata.FromIncomingContext(context)
+	if ok {
+		log.Printf("NaturallySelectCreaturesRpc: Metadata received: \"%v\".\n", contextMetadata)
+	} else {
+		log.Fatalf("NaturallySelectCreaturesRpc: Unable to read metadata!\n")
+	}
+
+	log.Printf("NaturallySelectCreaturesRpc: RpcRequest received: \"%v\".\n", request)
+
+	var creatureMessages []*pb.CreatureMessage
+
+	var wg sync.WaitGroup
+	wg.Add(len(request.CreatureMessages))
+
+	creatureMessageChannel := make(chan *pb.CreatureMessage)
+
+	for _, creatureMessage := range request.CreatureMessages {
+		go func(creatureMessage *pb.CreatureMessage) {
+			creature := creature_model.FromMessage(creatureMessage)
+
+			creature.NaturallySelect()
+
+			creatureMessage = creature_model.ToMessage(creature)
+
+			creatureMessageChannel <- creatureMessage
+		}(creatureMessage)
+	}
+
+	go func() {
+		for creatureMessage := range creatureMessageChannel {
+			creatureMessages = append(creatureMessages, creatureMessage)
+			wg.Done()
+		}
+	}()
+
+	wg.Wait()
+
+	return &pb.NaturallySelectCreaturesRpcResponse{
+		CreatureMessages: creatureMessages,
+	},
+		nil
+}
+
+func (creatureService *CreatureService) KillFailedCreatureRpc(context context.Context, request *pb.KillFailedCreatureRpcRequest) (response *pb.KillFailedCreatureRpcResponse, err error) {
+	log.Printf("KillFailedCreatureRpc: Interaction started.\n")
+	defer log.Printf("KillFailedCreatureRpc: Interaction complete.\n")
+
+	contextMetadata, ok := metadata.FromIncomingContext(context)
+	if ok {
+		log.Printf("KillFailedCreatureRpc: Metadata received: \"%v\".\n", contextMetadata)
+	} else {
+		log.Fatalf("KillFailedCreatureRpc: Unable to read metadata!\n")
+	}
+
+	log.Printf("KillFailedCreatureRpc: Request received: \"%v\".\n", request)
+
+	creature := creature_model.FromMessage(request.CreatureMessage)
+
+	creature.Kill()
+
+	log.Printf("KillFailedCreatureRpc: Sending response to client.\n")
+	return &pb.KillFailedCreatureRpcResponse{
+	},
+		nil
+}
+
+func (creatureService *CreatureService) KillFailedCreaturesRpc(context context.Context, request *pb.KillFailedCreaturesRpcRequest) (response *pb.KillFailedCreaturesRpcResponse, err error) {
+	log.Printf("KillFailedCreaturesRpc: Interaction started.\n")
+	defer log.Printf("KillFailedCreaturesRpc: Interaction complete.\n")
+
+	contextMetadata, ok := metadata.FromIncomingContext(context)
+	if ok {
+		log.Printf("KillFailedCreaturesRpc: Metadata received: \"%v\".\n", contextMetadata)
+	} else {
+		log.Fatalf("KillFailedCreaturesRpc: Unable to read metadata!\n")
+	}
+
+	log.Printf("KillFailedCreaturesRpc: RpcRequest received: \"%v\".\n", request)
+
+	var wg sync.WaitGroup
+	wg.Add(len(request.CreatureMessages))
+
+	creatureMessageChannel := make(chan struct{})
+
+	for _, creatureMessage := range request.CreatureMessages {
+		go func(creatureMessage *pb.CreatureMessage) {
+			creature := creature_model.FromMessage(creatureMessage)
+
+			creature.Kill()
+
+			creatureMessageChannel <- struct{}{}
+		}(creatureMessage)
+	}
+
+	go func() {
+		for range creatureMessageChannel {
+			wg.Done()
+		}
+	}()
+
+	wg.Wait()
+
+	return &pb.KillFailedCreaturesRpcResponse{
+	},
+		nil
+}
+
+func (creatureService *CreatureService) ReproduceSuccessfulCreatureRpc(context context.Context, request *pb.ReproduceSuccessfulCreatureRpcRequest) (response *pb.ReproduceSuccessfulCreatureRpcResponse, err error) {
+	log.Printf("ReproduceSuccessfulCreatureRpc: Interaction started.\n")
+	defer log.Printf("ReproduceSuccessfulCreatureRpc: Interaction complete.\n")
+
+	contextMetadata, ok := metadata.FromIncomingContext(context)
+	if ok {
+		log.Printf("ReproduceSuccessfulCreatureRpc: Metadata received: \"%v\".\n", contextMetadata)
+	} else {
+		log.Fatalf("ReproduceSuccessfulCreatureRpc: Unable to read metadata!\n")
+	}
+
+	log.Printf("ReproduceSuccessfulCreatureRpc: Request received: \"%v\".\n", request)
+
+	creature := creature_model.FromMessage(request.CreatureMessage)
+
+	creature.Reproduce()
+
+	creatureMessage := creature_model.ToMessage(creature)
+
+	log.Printf("ReproduceSuccessfulCreatureRpc: Sending response to client.\n")
+	return &pb.ReproduceSuccessfulCreatureRpcResponse{
+		CreatureMessage: creatureMessage,
+	},
+		nil
+}
+
+func (creatureService *CreatureService) ReproduceSuccessfulCreaturesRpc(context context.Context, request *pb.ReproduceSuccessfulCreaturesRpcRequest) (response *pb.ReproduceSuccessfulCreaturesRpcResponse, err error) {
+	log.Printf("ReproduceSuccessfulCreaturesRpc: Interaction started.\n")
+	defer log.Printf("ReproduceSuccessfulCreaturesRpc: Interaction complete.\n")
+
+	contextMetadata, ok := metadata.FromIncomingContext(context)
+	if ok {
+		log.Printf("ReproduceSuccessfulCreaturesRpc: Metadata received: \"%v\".\n", contextMetadata)
+	} else {
+		log.Fatalf("ReproduceSuccessfulCreaturesRpc: Unable to read metadata!\n")
+	}
+
+	log.Printf("ReproduceSuccessfulCreaturesRpc: RpcRequest received: \"%v\".\n", request)
+
+	var creatureMessages []*pb.CreatureMessage
+
+	var wg sync.WaitGroup
+	wg.Add(len(request.CreatureMessages))
+
+	creatureMessageChannel := make(chan *pb.CreatureMessage)
+
+	for _, creatureMessage := range request.CreatureMessages {
+		go func(creatureMessage *pb.CreatureMessage) {
+			creature := creature_model.FromMessage(creatureMessage)
+
+			creature.Reproduce()
+
+			creatureMessage = creature_model.ToMessage(creature)
+
+			creatureMessageChannel <- creatureMessage
+		}(creatureMessage)
+	}
+
+	go func() {
+		for creatureMessage := range creatureMessageChannel {
+			creatureMessages = append(creatureMessages, creatureMessage)
+			wg.Done()
+		}
+	}()
+
+	wg.Wait()
+
+	return &pb.ReproduceSuccessfulCreaturesRpcResponse{
 		CreatureMessages: creatureMessages,
 	},
 		nil

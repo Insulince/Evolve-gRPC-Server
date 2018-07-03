@@ -3,6 +3,7 @@ package creature_model
 import (
 	"evolve-rpc/pkg/pb"
 	"fmt"
+	"math/rand"
 )
 
 type Creature struct {
@@ -27,6 +28,21 @@ func (c *Creature) Simulate() () {
 		fmt.Println("Creature already simulated...")
 		// TODO: Should throw an error.
 	}
+}
+
+func (c *Creature) NaturallySelect() () {
+	// TODO: Implement correctly.
+
+	if rand.Float64() < 0.5 {
+		c.Outcome = "SUCCESS"
+	} else {
+		c.Outcome = "FAILURE"
+	}
+	c.NaturallySelectedThisGeneration = true
+}
+
+func (c *Creature) Kill() () {
+	// TODO: Implement.
 }
 
 func (c *Creature) Reproduce() () {
