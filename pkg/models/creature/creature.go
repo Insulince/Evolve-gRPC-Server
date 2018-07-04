@@ -2,8 +2,9 @@ package creature_model
 
 import (
 	"evolve-rpc/pkg/pb"
-	"fmt"
 	"math/rand"
+	"log"
+	"evolve-rpc/pkg/models/population"
 )
 
 type Creature struct {
@@ -27,13 +28,13 @@ func New() (creature *Creature) {
 	}
 }
 
-func FromMessage(creatureMessage *pb.CreatureMessage) (creature Creature) {
-	return Creature{
+func FromMessage(creatureMessage *pb.CreatureMessage) (creature *Creature) {
+	return &Creature{
 		CreatureMessage: creatureMessage,
 	}
 }
 
-func ToMessage(creature Creature) (creatureMessage *pb.CreatureMessage) {
+func ToMessage(creature *Creature) (creatureMessage *pb.CreatureMessage) {
 	return creature.CreatureMessage
 }
 
@@ -42,41 +43,44 @@ func (c *Creature) Simulate() () {
 		c.FitnessValue = c.Speed + c.Stamina + c.Health + c.Greed
 		c.SimulatedThisGeneration = true
 	} else {
-		fmt.Println("Creature already simulated...")
-		// TODO: Should throw an error.
+		log.Fatalf("Creature \"%v\" already simulated...\n", c.Name)
 	}
 }
 
-func (c *Creature) NaturallySelect() () {
-	// TODO: Implement correctly.
-
-	if rand.Float64() < 0.5 {
-		c.Outcome = "SUCCESS"
+func (c *Creature) NaturallySelect(p *population_model.Population) () {
+	if !c.NaturallySelectedThisGeneration {
+		if rand.Float64() >= float64(c.FitnessIndex) / float64(p.Size) {
+			c.Outcome = "SUCCESS"
+		} else {
+			c.Outcome = "FAILURE"
+		}
+		c.NaturallySelectedThisGeneration = true
 	} else {
-		c.Outcome = "FAILURE"
+		log.Fatalf("Creature \"%v\" already naturall selected...\n", c.Name)
 	}
-	c.NaturallySelectedThisGeneration = true
 }
 
 func (c *Creature) Kill() () {
-	// TODO: Implement, if needed.
+	// Currently there's nothing to be done when a creature is killed, it just "fails" to be sent back to the UI. This function is included for completeness.
 }
 
 func (c *Creature) Reproduce() (offspring []*Creature) {
-	child := New()
+	quantityChildren := rand.Intn(3) + 1 // Reproduce between 1 and 3 children (inclusive: [1, 3]).
 
-	child.Name = c.Name
-	child.Generation = c.Generation + 1
-	child.Speed = c.Speed
-	child.Health = c.Health
-	child.Stamina = c.Stamina
-	child.Greed = c.Greed
+	for i := 0; i < quantityChildren; i++ {
+		child := New()
 
-	// TODO: Mutations.
+		child.Name = c.Name
+		child.Generation = c.Generation + 1
+		child.Speed = c.Speed
+		child.Health = c.Health
+		child.Stamina = c.Stamina
+		child.Greed = c.Greed
 
-	offspring = append(offspring, child)
+		// TODO: Mutations.
 
-	// TODO: Multiple children.
+		offspring = append(offspring, child)
+	}
 
 	return offspring
 }

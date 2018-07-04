@@ -9,6 +9,7 @@ import (
 	"evolve-rpc/pkg"
 	"sync"
 	"evolve-rpc/pkg/models/creature"
+	"evolve-rpc/pkg/models/population"
 )
 
 type CreatureService struct {
@@ -195,7 +196,7 @@ func (creatureService *CreatureService) NaturallySelectCreatureRpc(context conte
 
 	creature := creature_model.FromMessage(request.CreatureMessage)
 
-	creature.NaturallySelect()
+	creature.NaturallySelect(population_model.FromMessage(request.PopulationMessage))
 
 	creatureMessage := creature_model.ToMessage(creature)
 
@@ -230,7 +231,7 @@ func (creatureService *CreatureService) NaturallySelectCreaturesRpc(context cont
 		go func(creatureMessage *pb.CreatureMessage) {
 			creature := creature_model.FromMessage(creatureMessage)
 
-			creature.NaturallySelect()
+			creature.NaturallySelect(population_model.FromMessage(request.PopulationMessage))
 
 			creatureMessage = creature_model.ToMessage(creature)
 
@@ -336,7 +337,7 @@ func (creatureService *CreatureService) ReproduceSuccessfulCreatureRpc(context c
 
 	var creatureMessages []*pb.CreatureMessage
 	for _, child := range offspring {
-		creatureMessages = append(creatureMessages, creature_model.ToMessage(*child))
+		creatureMessages = append(creatureMessages, creature_model.ToMessage(child))
 	}
 
 	log.Printf("ReproduceSuccessfulCreatureRpc: Sending response to client.\n")
@@ -374,7 +375,7 @@ func (creatureService *CreatureService) ReproduceSuccessfulCreaturesRpc(context 
 
 			var creatureMessages []*pb.CreatureMessage
 			for _, child := range offspring {
-				creatureMessages = append(creatureMessages, creature_model.ToMessage(*child))
+				creatureMessages = append(creatureMessages, creature_model.ToMessage(child))
 			}
 			creatureMessagesChannel <- creatureMessages
 		}(creatureMessage)
