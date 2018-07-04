@@ -332,13 +332,16 @@ func (creatureService *CreatureService) ReproduceSuccessfulCreatureRpc(context c
 
 	creature := creature_model.FromMessage(request.CreatureMessage)
 
-	creature.Reproduce()
+	offspring := creature.Reproduce()
 
-	creatureMessage := creature_model.ToMessage(creature)
+	var creatureMessages []*pb.CreatureMessage
+	for _, child := range offspring {
+		creatureMessages = append(creatureMessages, creature_model.ToMessage(*child))
+	}
 
 	log.Printf("ReproduceSuccessfulCreatureRpc: Sending response to client.\n")
 	return &pb.ReproduceSuccessfulCreatureRpcResponse{
-		CreatureMessage: creatureMessage,
+		CreatureMessages: creatureMessages,
 	},
 		nil
 }
@@ -356,28 +359,30 @@ func (creatureService *CreatureService) ReproduceSuccessfulCreaturesRpc(context 
 
 	log.Printf("ReproduceSuccessfulCreaturesRpc: RpcRequest received: \"%v\".\n", request)
 
-	var creatureMessages []*pb.CreatureMessage
+	var offspring []*pb.CreatureMessage
 
 	var wg sync.WaitGroup
 	wg.Add(len(request.CreatureMessages))
 
-	creatureMessageChannel := make(chan *pb.CreatureMessage)
+	creatureMessagesChannel := make(chan []*pb.CreatureMessage)
 
 	for _, creatureMessage := range request.CreatureMessages {
 		go func(creatureMessage *pb.CreatureMessage) {
 			creature := creature_model.FromMessage(creatureMessage)
 
-			creature.Reproduce()
+			offspring := creature.Reproduce()
 
-			creatureMessage = creature_model.ToMessage(creature)
-
-			creatureMessageChannel <- creatureMessage
+			var creatureMessages []*pb.CreatureMessage
+			for _, child := range offspring {
+				creatureMessages = append(creatureMessages, creature_model.ToMessage(*child))
+			}
+			creatureMessagesChannel <- creatureMessages
 		}(creatureMessage)
 	}
 
 	go func() {
-		for creatureMessage := range creatureMessageChannel {
-			creatureMessages = append(creatureMessages, creatureMessage)
+		for creatureMessages := range creatureMessagesChannel {
+			offspring = append(offspring, creatureMessages...)
 			wg.Done()
 		}
 	}()
@@ -385,7 +390,7 @@ func (creatureService *CreatureService) ReproduceSuccessfulCreaturesRpc(context 
 	wg.Wait()
 
 	return &pb.ReproduceSuccessfulCreaturesRpcResponse{
-		CreatureMessages: creatureMessages,
+		CreatureMessages: offspring,
 	},
 		nil
 }
