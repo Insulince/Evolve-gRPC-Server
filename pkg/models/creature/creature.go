@@ -49,10 +49,18 @@ func (c *Creature) Simulate() () {
 
 func (c *Creature) NaturallySelect(p *population_model.Population) () {
 	if !c.NaturallySelectedThisGeneration {
-		if rand.Float64() >= float64(c.FitnessIndex) / float64(p.Size) {
-			c.Outcome = "SUCCESS"
+		if p.Size < p.CarryingCapacity {
+			if rand.Float64() >= float64(c.FitnessIndex)/float64(p.Size) {
+				c.Outcome = "SUCCESS"
+			} else {
+				c.Outcome = "FAILURE"
+			}
 		} else {
-			c.Outcome = "FAILURE"
+			if rand.Float64() >= float64(c.FitnessIndex)/float64(p.CarryingCapacity) {
+				c.Outcome = "SUCCESS"
+			} else {
+				c.Outcome = "FAILURE"
+			}
 		}
 		c.NaturallySelectedThisGeneration = true
 	} else {
