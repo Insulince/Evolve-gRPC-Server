@@ -1,6 +1,8 @@
 package util
 
-import "math/rand"
+import (
+	"math/rand"
+)
 
 const QuantityPhonemesPerName = 3
 
@@ -169,4 +171,10 @@ func GenerateRandomName() (randomName string) {
 	}
 
 	return randomName
+}
+
+func MutateName(name string) (mutatedName string) {
+	start := rand.Intn(QuantityPhonemesPerName) * 2
+	mutatedName = name[0:start] + PHONEMES[rand.Int()%len(PHONEMES)] + name[start+2:]
+	return mutatedName
 }

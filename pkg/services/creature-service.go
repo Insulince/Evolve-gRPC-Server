@@ -34,6 +34,7 @@ func (creatureService *CreatureService) GenerateCreatureRpc(context context.Cont
 	stamina := rand.Float64()
 	health := rand.Float64()
 	greed := rand.Float64()
+	chanceOfMutation := rand.Float64()
 
 	log.Printf("GenerateCreatureRpc: Sending response to client.\n")
 	return &pb.GenerateCreatureRpcResponse{
@@ -44,6 +45,7 @@ func (creatureService *CreatureService) GenerateCreatureRpc(context context.Cont
 			Stamina:                 stamina,
 			Health:                  health,
 			Greed:                   greed,
+			ChanceOfMutation:        chanceOfMutation,
 			FitnessValue:            0,
 			SimulatedThisGeneration: false,
 		},
@@ -78,6 +80,7 @@ func (creatureService *CreatureService) GenerateCreaturesRpc(context context.Con
 			stamina := rand.Float64()
 			health := rand.Float64()
 			greed := rand.Float64()
+			chanceOfMutation := rand.Float64()
 
 			creatureMessageChannel <- &pb.CreatureMessage{
 				Name:                    name,
@@ -87,6 +90,7 @@ func (creatureService *CreatureService) GenerateCreaturesRpc(context context.Con
 				Health:                  health,
 				Greed:                   greed,
 				FitnessValue:            0,
+				ChanceOfMutation:        chanceOfMutation,
 				SimulatedThisGeneration: false,
 				Outcome:                 "UNSET",
 			}

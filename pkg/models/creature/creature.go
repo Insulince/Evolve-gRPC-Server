@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"log"
 	"evolve-rpc/pkg/models/population"
+	"evolve-rpc/pkg"
 )
 
 type Creature struct {
@@ -20,10 +21,13 @@ func New() (creature *Creature) {
 			Stamina:                         0,
 			Health:                          0,
 			Greed:                           0,
+			ChanceOfMutation:                0,
 			FitnessValue:                    0,
 			SimulatedThisGeneration:         false,
 			Outcome:                         "UNSET",
 			NaturallySelectedThisGeneration: false,
+			FitnessIndex:                    0,
+			MutatedThisGeneration:           false,
 		},
 	}
 }
@@ -40,7 +44,7 @@ func ToMessage(creature *Creature) (creatureMessage *pb.CreatureMessage) {
 
 func (c *Creature) Simulate() () {
 	if !c.SimulatedThisGeneration {
-		c.FitnessValue = c.Speed + c.Stamina + c.Health + c.Greed
+		c.FitnessValue = c.Speed*(c.Stamina+1) + c.Health - ((c.Greed + 1.5) * (c.Stamina + 1))
 		c.SimulatedThisGeneration = true
 	} else {
 		log.Fatalf("Creature \"%v\" already simulated...\n", c.Name)
@@ -72,6 +76,7 @@ func (c *Creature) Kill() () {
 	// Currently there's nothing to be done when a creature is killed, it just "fails" to be sent back to the UI. This function is included for completeness.
 }
 
+// TODO: Refactor.
 func (c *Creature) Reproduce() (offspring []*Creature) {
 	quantityChildren := rand.Intn(3) + 1 // Reproduce between 1 and 3 children (inclusive: [1, 3]).
 
@@ -84,8 +89,80 @@ func (c *Creature) Reproduce() (offspring []*Creature) {
 		child.Health = c.Health
 		child.Stamina = c.Stamina
 		child.Greed = c.Greed
+		child.ChanceOfMutation = c.ChanceOfMutation
 
-		// TODO: Mutations.
+		const MAX_DELTA = 0.1
+		mutations := 0
+		for rand.Float64() < c.ChanceOfMutation && mutations < 5 {
+			attributeIndex := rand.Intn(5)
+			mutationAmount := rand.Float64() * MAX_DELTA
+			for mutationAmount == 0 {
+				mutationAmount = rand.Float64() * MAX_DELTA
+			}
+			if rand.Float64() < 0.5 {
+				mutationAmount *= -1
+			}
+
+			validMutation := true
+			switch attributeIndex {
+			case 0:
+				child.Speed += mutationAmount
+				if child.Speed > 1 {
+					child.Speed = 1
+					validMutation = false
+				} else if child.Speed < 0 {
+					child.Speed = 0
+					validMutation = false
+				}
+			case 1:
+				child.Health += mutationAmount
+				if child.Health > 1 {
+					child.Health = 1
+					validMutation = false
+				} else if child.Health < 0 {
+					child.Health = 0
+					validMutation = false
+				}
+			case 2:
+				child.Stamina += mutationAmount
+				if child.Stamina > 1 {
+					child.Stamina = 1
+					validMutation = false
+				} else if child.Stamina < 0 {
+					child.Stamina = 0
+					validMutation = false
+				}
+			case 3:
+				child.Greed += mutationAmount
+				if child.Greed > 1 {
+					child.Greed = 1
+					validMutation = false
+				} else if child.Greed < 0 {
+					child.Greed = 0
+					validMutation = false
+				}
+			case 4:
+				child.ChanceOfMutation += mutationAmount
+				if child.ChanceOfMutation > 1 {
+					child.ChanceOfMutation = 1
+					validMutation = false
+				} else if child.ChanceOfMutation < 0.001 {
+					child.ChanceOfMutation = 0.001
+					validMutation = false
+				}
+			default:
+				log.Fatalf("Unrecognized attributeIndex amount: %v\n", attributeIndex)
+			}
+
+			if validMutation {
+				mutations++
+				if child.MutatedThisGeneration == false {
+					child.Generation = 0
+					child.Name = util.MutateName(c.Name)
+					child.MutatedThisGeneration = true
+				}
+			}
+		}
 
 		offspring = append(offspring, child)
 	}
