@@ -44,7 +44,34 @@ func ToMessage(creature *Creature) (creatureMessage *pb.CreatureMessage) {
 
 func (c *Creature) Simulate() () {
 	if !c.SimulatedThisGeneration {
-		c.FitnessValue = c.Speed*(c.Stamina+1) + c.Health - ((c.Greed + 1.5) * (c.Stamina + 1))
+		speed := c.Speed
+		stamina := c.Stamina
+		health := c.Health
+		greed := c.Greed
+
+		distance := 0.0
+		for i := 0; i < 100; i++ {
+			if stamina > 0 {
+				stamina -= 0.05
+				distance += speed
+			} else {
+				if float64(i % 10) / 10.0 < greed + 0.01 {
+					health -= 0.5
+					distance += speed
+
+					if health <= 0 {
+						c.FitnessValue = 0
+						c.SimulatedThisGeneration = true
+						return
+					}
+				} else {
+					// TODO: Take a break instead of oscillating between tired and not tired.
+					stamina += 0.05
+				}
+			}
+		}
+
+		c.FitnessValue = distance / 100.0
 		c.SimulatedThisGeneration = true
 	} else {
 		log.Fatalf("Creature \"%v\" already simulated...\n", c.Name)
@@ -53,18 +80,22 @@ func (c *Creature) Simulate() () {
 
 func (c *Creature) NaturallySelect(p *population_model.Population) () {
 	if !c.NaturallySelectedThisGeneration {
-		if p.Size < p.CarryingCapacity {
-			if rand.Float64() >= float64(c.FitnessIndex)/float64(p.Size) {
-				c.Outcome = "SUCCESS"
-			} else {
-				c.Outcome = "FAILURE"
-			}
+		if c.FitnessValue > 0 {
+			//if p.Size < p.CarryingCapacity {
+			//	if rand.Float64() >= float64(c.FitnessIndex)/float64(p.Size) {
+			//		c.Outcome = "SUCCESS"
+			//	} else {
+			//		c.Outcome = "FAILURE"
+			//	}
+			//} else {
+				if rand.Float64() >= float64(c.FitnessIndex)/float64(p.CarryingCapacity) {
+					c.Outcome = "SUCCESS"
+				} else {
+					c.Outcome = "FAILURE"
+				}
+			//}
 		} else {
-			if rand.Float64() >= float64(c.FitnessIndex)/float64(p.CarryingCapacity) {
-				c.Outcome = "SUCCESS"
-			} else {
-				c.Outcome = "FAILURE"
-			}
+			c.Outcome = "FAILURE"
 		}
 		c.NaturallySelectedThisGeneration = true
 	} else {
